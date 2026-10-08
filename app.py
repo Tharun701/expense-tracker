@@ -1,9 +1,10 @@
-﻿from datetime import date, datetime
+﻿from datetime import date, datetime, timedelta
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_login import (LoginManager, UserMixin, current_user, login_required,
                          login_user, logout_user)
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
@@ -168,5 +169,60 @@ def delete(expense_id):
     return redirect(url_for("index"))
 
 
+# ---------- Dashboard ----------
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    today = date.today()
+    month_start = today.replace(day=1)
+    next_month_start = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+
+    this_month = [
+        Expense.user_id == current_user.id,
+        Expense.expense_date >= month_start,
+        Expense.expense_date < next_month_start,
+    ]
+
+    # SQL: SELECT SUM(amount) ... WHERE this month
+    month_total = db.session.query(func.coalesce(func.sum(Expense.amount), 0)).filter(*this_month).scalar()
+    month_count = Expense.query.filter(*this_month).count()
+
+    # SQL: SELECT category, SUM(amount) ... GROUP BY category
+    by_category = (db.session.query(Expense.category, func.sum(Expense.amount))
+                   .filter(*this_month).group_by(Expense.category).all())
+
+    # Last 6 months, oldest first, e.g. ["2026-05", ..., "2026-10"]
+    months = []
+    y, m = today.year, today.month
+    for _ in range(6):
+        months.append(f"{y:04d}-{m:02d}")
+        m -= 1
+        if m == 0:
+            m, y = 12, y - 1
+    months.reverse()
+    first_day = date.fromisoformat(months[0] + "-01")
+
+    month_expr = func.strftime("%Y-%m", Expense.expense_date)
+    rows = (db.session.query(month_expr, func.sum(Expense.amount))
+            .filter(Expense.user_id == current_user.id, Expense.expense_date >= first_day)
+            .group_by(month_expr).all())
+    totals = dict(rows)
+
+    return render_template(
+        "dashboard.html",
+        month_name=today.strftime("%B %Y"),
+        month_total=month_total,
+        month_count=month_count,
+        category_labels=[c for c, _ in by_category],
+        category_values=[round(v, 2) for _, v in by_category],
+        month_labels=months,
+        month_values=[round(totals.get(k, 0), 2) for k in months],
+    )
+
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
+

@@ -1,0 +1,73 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<h4 class="mb-3">Dashboard <small class="text-muted">{{ month_name }}</small></h4>
+
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card shadow-sm text-center">
+            <div class="card-body">
+                <div class="text-muted">Spent this month</div>
+                <div class="display-6">Rs. {{ "%.2f"|format(month_total) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card shadow-sm text-center">
+            <div class="card-body">
+                <div class="text-muted">Expenses this month</div>
+                <div class="display-6">{{ month_count }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">By category (this month)</div>
+            <div class="card-body">
+                {% if category_values %}
+                    <canvas id="categoryChart"></canvas>
+                {% else %}
+                    <p class="text-muted text-center my-4">No expenses this month yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">Last 6 months</div>
+            <div class="card-body">
+                <canvas id="monthChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="/" class="btn btn-secondary">Back to expenses</a>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+    const categoryLabels = {{ category_labels|tojson }};
+    const categoryValues = {{ category_values|tojson }};
+    const monthLabels = {{ month_labels|tojson }};
+    const monthValues = {{ month_values|tojson }};
+
+    if (categoryValues.length > 0) {
+        new Chart(document.getElementById("categoryChart"), {
+            type: "pie",
+            data: { labels: categoryLabels, datasets: [{ data: categoryValues }] }
+        });
+    }
+
+    new Chart(document.getElementById("monthChart"), {
+        type: "bar",
+        data: {
+            labels: monthLabels,
+            datasets: [{ label: "Total spent (Rs.)", data: monthValues, backgroundColor: "#0d6efd" }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+</script>
+{% endblock %}
