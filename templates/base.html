@@ -10,6 +10,17 @@
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
             <a class="navbar-brand" href="/">Expense Tracker</a>
+            <div class="d-flex align-items-center gap-2">
+                {% if current_user.is_authenticated %}
+                    <span class="text-light">Hi, {{ current_user.username }}</span>
+                    <form method="POST" action="/logout" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-light">Logout</button>
+                    </form>
+                {% else %}
+                    <a href="/login" class="btn btn-sm btn-outline-light">Login</a>
+                    <a href="/register" class="btn btn-sm btn-light">Register</a>
+                {% endif %}
+            </div>
         </div>
     </nav>
 
