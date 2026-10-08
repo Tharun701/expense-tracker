@@ -1,4 +1,5 @@
 ﻿import csv
+import os
 import io
 from datetime import date, datetime, timedelta
 
@@ -11,8 +12,8 @@ from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///expenses.db"
-app.secret_key = "dev-secret-change-later"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///expenses.db")
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-later")
 
 db = SQLAlchemy(app)
 
@@ -277,3 +278,4 @@ def dashboard():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
