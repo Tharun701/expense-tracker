@@ -1,12 +1,15 @@
-from datetime import date
+﻿from datetime import date, datetime
 
-from flask import Flask, jsonify
+from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///expenses.db"
+app.secret_key = "dev-secret-change-later"
 
 db = SQLAlchemy(app)
+
+CATEGORIES = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Health", "Other"]
 
 
 class Expense(db.Model):
@@ -22,28 +25,69 @@ with app.app_context():
     db.create_all()
 
 
+def read_form():
+    """Read and validate the form. Returns (data, error)."""
+    title = request.form.get("title", "").strip()
+    category = request.form.get("category", "Other")
+    note = request.form.get("note", "").strip()
+    try:
+        amount = float(request.form.get("amount", ""))
+        expense_date = datetime.strptime(request.form.get("expense_date", ""), "%Y-%m-%d").date()
+    except ValueError:
+        return None, "Please enter a valid amount and date."
+    if not title:
+        return None, "Title is required."
+    if amount <= 0:
+        return None, "Amount must be greater than zero."
+    if category not in CATEGORIES:
+        category = "Other"
+    return {"title": title, "amount": amount, "category": category,
+            "expense_date": expense_date, "note": note}, None
+
+
 @app.route("/")
-def home():
-    return "<h1>Expense Tracker is running!</h1>"
+def index():
+    expenses = Expense.query.order_by(Expense.expense_date.desc(), Expense.id.desc()).all()
+    total = sum(e.amount for e in expenses)
+    return render_template("index.html", expenses=expenses, total=total,
+                           categories=CATEGORIES, today=date.today().isoformat())
 
 
-# Temporary test routes (we will delete these in Step 3)
-@app.route("/test-add")
-def test_add():
-    expense = Expense(title="Lunch", amount=150.0, category="Food")
-    db.session.add(expense)
+@app.route("/add", methods=["POST"])
+def add():
+    data, error = read_form()
+    if error:
+        flash(error)
+    else:
+        db.session.add(Expense(**data))
+        db.session.commit()
+        flash("Expense added.")
+    return redirect(url_for("index"))
+
+
+@app.route("/edit/<int:expense_id>", methods=["GET", "POST"])
+def edit(expense_id):
+    expense = db.get_or_404(Expense, expense_id)
+    if request.method == "POST":
+        data, error = read_form()
+        if error:
+            flash(error)
+            return redirect(url_for("edit", expense_id=expense_id))
+        for key, value in data.items():
+            setattr(expense, key, value)
+        db.session.commit()
+        flash("Expense updated.")
+        return redirect(url_for("index"))
+    return render_template("edit.html", expense=expense, categories=CATEGORIES)
+
+
+@app.route("/delete/<int:expense_id>", methods=["POST"])
+def delete(expense_id):
+    expense = db.get_or_404(Expense, expense_id)
+    db.session.delete(expense)
     db.session.commit()
-    return "Sample expense saved!"
-
-
-@app.route("/test-list")
-def test_list():
-    expenses = Expense.query.all()
-    return jsonify([
-        {"id": e.id, "title": e.title, "amount": e.amount,
-         "category": e.category, "date": str(e.expense_date)}
-        for e in expenses
-    ])
+    flash("Expense deleted.")
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":
