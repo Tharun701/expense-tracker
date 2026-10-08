@@ -13,7 +13,7 @@ app.secret_key = "dev-secret-change-later"
 db = SQLAlchemy(app)
 
 login_manager = LoginManager(app)
-login_manager.login_view = "login"   # where to send people who are not logged in
+login_manager.login_view = "login"
 
 CATEGORIES = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Health", "Other"]
 
@@ -22,10 +22,13 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    expenses = db.relationship("Expense", backref="owner", lazy=True,
+                               cascade="all, delete-orphan")
 
 
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     title = db.Column(db.String(100), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50), nullable=False)
@@ -60,6 +63,11 @@ def read_form():
         category = "Other"
     return {"title": title, "amount": amount, "category": category,
             "expense_date": expense_date, "note": note}, None
+
+
+def get_own_expense_or_404(expense_id):
+    """Return the expense only if it belongs to the logged-in user."""
+    return Expense.query.filter_by(id=expense_id, user_id=current_user.id).first_or_404()
 
 
 # ---------- Authentication ----------
@@ -108,12 +116,13 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ---------- Expenses (login required) ----------
+# ---------- Expenses (login required, own data only) ----------
 
 @app.route("/")
 @login_required
 def index():
-    expenses = Expense.query.order_by(Expense.expense_date.desc(), Expense.id.desc()).all()
+    expenses = (Expense.query.filter_by(user_id=current_user.id)
+                .order_by(Expense.expense_date.desc(), Expense.id.desc()).all())
     total = sum(e.amount for e in expenses)
     return render_template("index.html", expenses=expenses, total=total,
                            categories=CATEGORIES, today=date.today().isoformat())
@@ -126,7 +135,7 @@ def add():
     if error:
         flash(error)
     else:
-        db.session.add(Expense(**data))
+        db.session.add(Expense(user_id=current_user.id, **data))
         db.session.commit()
         flash("Expense added.")
     return redirect(url_for("index"))
@@ -135,7 +144,7 @@ def add():
 @app.route("/edit/<int:expense_id>", methods=["GET", "POST"])
 @login_required
 def edit(expense_id):
-    expense = db.get_or_404(Expense, expense_id)
+    expense = get_own_expense_or_404(expense_id)
     if request.method == "POST":
         data, error = read_form()
         if error:
@@ -152,7 +161,7 @@ def edit(expense_id):
 @app.route("/delete/<int:expense_id>", methods=["POST"])
 @login_required
 def delete(expense_id):
-    expense = db.get_or_404(Expense, expense_id)
+    expense = get_own_expense_or_404(expense_id)
     db.session.delete(expense)
     db.session.commit()
     flash("Expense deleted.")
