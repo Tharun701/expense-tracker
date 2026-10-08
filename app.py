@@ -1,6 +1,9 @@
-﻿from datetime import date, datetime, timedelta
+﻿import csv
+import io
+from datetime import date, datetime, timedelta
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import (Flask, Response, flash, redirect, render_template, request,
+                   url_for)
 from flask_login import (LoginManager, UserMixin, current_user, login_required,
                          login_user, logout_user)
 from flask_sqlalchemy import SQLAlchemy
@@ -71,6 +74,44 @@ def get_own_expense_or_404(expense_id):
     return Expense.query.filter_by(id=expense_id, user_id=current_user.id).first_or_404()
 
 
+def parse_date(text):
+    """Turn '2026-10-08' into a date, or None if empty or invalid."""
+    try:
+        return datetime.strptime(text or "", "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def filtered_expenses():
+    """Build the query step by step from the URL filters. Returns (query, filters)."""
+    q = request.args.get("q", "").strip()
+    category = request.args.get("category", "")
+    start = parse_date(request.args.get("start"))
+    end = parse_date(request.args.get("end"))
+
+    query = Expense.query.filter_by(user_id=current_user.id)
+    if q:
+        query = query.filter(Expense.title.ilike(f"%{q}%"))
+    if category in CATEGORIES:
+        query = query.filter(Expense.category == category)
+    if start:
+        query = query.filter(Expense.expense_date >= start)
+    if end:
+        query = query.filter(Expense.expense_date <= end)
+
+    query = query.order_by(Expense.expense_date.desc(), Expense.id.desc())
+    filters = {"q": q, "category": category,
+               "start": start.isoformat() if start else "",
+               "end": end.isoformat() if end else ""}
+    return query, filters
+
+
+def csv_safe(value):
+    """Stop spreadsheet formula injection (cells starting with = + - @)."""
+    text = str(value or "")
+    return "'" + text if text[:1] in ("=", "+", "-", "@") else text
+
+
 # ---------- Authentication ----------
 
 @app.route("/register", methods=["GET", "POST"])
@@ -122,11 +163,27 @@ def logout():
 @app.route("/")
 @login_required
 def index():
-    expenses = (Expense.query.filter_by(user_id=current_user.id)
-                .order_by(Expense.expense_date.desc(), Expense.id.desc()).all())
+    query, filters = filtered_expenses()
+    expenses = query.all()
     total = sum(e.amount for e in expenses)
     return render_template("index.html", expenses=expenses, total=total,
-                           categories=CATEGORIES, today=date.today().isoformat())
+                           categories=CATEGORIES, today=date.today().isoformat(),
+                           filters=filters)
+
+
+@app.route("/export")
+@login_required
+def export():
+    query, _ = filtered_expenses()
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["Date", "Title", "Category", "Amount", "Note"])
+    for e in query.all():
+        writer.writerow([e.expense_date.isoformat(), csv_safe(e.title), e.category,
+                         f"{e.amount:.2f}", csv_safe(e.note)])
+    # "\ufeff" lets Excel read the file as UTF-8
+    return Response("\ufeff" + buffer.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=expenses.csv"})
 
 
 @app.route("/add", methods=["POST"])
@@ -184,15 +241,12 @@ def dashboard():
         Expense.expense_date < next_month_start,
     ]
 
-    # SQL: SELECT SUM(amount) ... WHERE this month
     month_total = db.session.query(func.coalesce(func.sum(Expense.amount), 0)).filter(*this_month).scalar()
     month_count = Expense.query.filter(*this_month).count()
 
-    # SQL: SELECT category, SUM(amount) ... GROUP BY category
     by_category = (db.session.query(Expense.category, func.sum(Expense.amount))
                    .filter(*this_month).group_by(Expense.category).all())
 
-    # Last 6 months, oldest first, e.g. ["2026-05", ..., "2026-10"]
     months = []
     y, m = today.year, today.month
     for _ in range(6):
@@ -220,9 +274,6 @@ def dashboard():
         month_values=[round(totals.get(k, 0), 2) for k in months],
     )
 
+
 if __name__ == "__main__":
     app.run(debug=True)
-
-
-
-
