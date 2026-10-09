@@ -187,6 +187,34 @@ def export():
                     headers={"Content-Disposition": "attachment; filename=expenses.csv"})
 
 
+@app.route("/export-xlsx")
+@login_required
+def export_xlsx():
+    from openpyxl import Workbook
+
+    query, _ = filtered_expenses()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Expenses"
+    ws.append(["Date", "Title", "Category", "Amount", "Note"])
+    for e in query.all():
+        ws.append([e.expense_date, csv_safe(e.title), e.category, e.amount, csv_safe(e.note)])
+
+    for row in ws.iter_rows(min_row=2):
+        row[0].number_format = "DD-MMM-YYYY"
+        row[3].number_format = "#,##0.00"
+
+    for col, width in zip("ABCDE", (14, 28, 16, 12, 30)):
+        ws.column_dimensions[col].width = width
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return Response(
+        buffer.getvalue(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=expenses.xlsx"},
+    )
+
 @app.route("/add", methods=["POST"])
 @login_required
 def add():
@@ -278,4 +306,5 @@ def dashboard():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
 

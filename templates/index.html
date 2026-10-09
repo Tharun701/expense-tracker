@@ -69,6 +69,7 @@
                 <div class="mt-2">
                     <a href="/" class="btn btn-sm btn-outline-secondary">Clear filters</a>
                     <a href="/export?{{ request.query_string.decode() }}" class="btn btn-sm btn-success">Export CSV</a>
+                    <a href="/export-xlsx?{{ request.query_string.decode() }}" class="btn btn-sm btn-success">Export Excel</a>
                 </div>
             </div>
         </div>
@@ -116,3 +117,4 @@
     </div>
 </div>
 {% endblock %}
+
