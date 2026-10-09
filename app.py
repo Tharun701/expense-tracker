@@ -12,7 +12,10 @@ from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///expenses.db")
+db_url = os.environ.get("DATABASE_URL", "sqlite:///expenses.db")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-later")
 
 db = SQLAlchemy(app)
@@ -286,11 +289,13 @@ def dashboard():
     months.reverse()
     first_day = date.fromisoformat(months[0] + "-01")
 
-    month_expr = func.strftime("%Y-%m", Expense.expense_date)
-    rows = (db.session.query(month_expr, func.sum(Expense.amount))
+    rows = (db.session.query(Expense.expense_date, Expense.amount)
             .filter(Expense.user_id == current_user.id, Expense.expense_date >= first_day)
-            .group_by(month_expr).all())
-    totals = dict(rows)
+            .all())
+    totals = {}
+    for d, amt in rows:
+        key = d.strftime("%Y-%m")
+        totals[key] = totals.get(key, 0) + amt
 
     return render_template(
         "dashboard.html",
@@ -306,5 +311,7 @@ def dashboard():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
 
 
