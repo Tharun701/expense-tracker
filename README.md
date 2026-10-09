@@ -2,7 +2,7 @@
 
 A full stack web app to record, search and analyse personal expenses.
 
-**Live demo:** PASTE-YOUR-RENDER-LINK-HERE (free tier, may take about a minute to wake up)
+**Live demo:** https://expense-tracker-jmsj.onrender.com (free tier, may take about a minute to wake up)
 
 ## Features
 - User registration and login with hashed passwords
@@ -39,4 +39,5 @@ A full stack web app to record, search and analyse personal expenses.
 - CSRF protection with Flask-WTF
 - Automated tests with pytest
 - Monthly budgets and alerts
+
 
