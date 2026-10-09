@@ -27,6 +27,8 @@ Demo login: **demo** / **demo123** (shared account, please don't enter personal 
 - Parameterized queries through SQLAlchemy
 - CSV export sanitizes cells that could run as spreadsheet formulas
 - Secrets stored in environment variables
+- CSRF protection on all forms (Flask-WTF)
+- Automated tests (pytest)
 
 ## Run locally
 1. git clone https://github.com/Tharun701/expense-tracker.git
@@ -39,9 +41,9 @@ Demo login: **demo** / **demo123** (shared account, please don't enter personal 
 
 ## Future improvements
 - Database migrations with Alembic
-- CSRF protection with Flask-WTF
 - Automated tests with pytest
 - Monthly budgets and alerts
+
 
 
 
