@@ -9,7 +9,10 @@ itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.4
 openpyxl==3.1.5
+psycopg==3.3.6
+psycopg-binary==3.3.6
 psycopg2-binary==2.9.13
 SQLAlchemy==2.1.4
 typing_extensions==4.16.0
+tzdata==2026.5
 Werkzeug==3.1.9
