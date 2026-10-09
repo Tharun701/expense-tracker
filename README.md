@@ -4,6 +4,9 @@ A full stack web app to record, search and analyse personal expenses.
 
 **Live demo:** https://expense-tracker-jmsj.onrender.com (free tier, may take about a minute to wake up)
 
+## Try it
+Demo login: **demo** / **demo123** (shared account, please don't enter personal data)
+
 ## Features
 - User registration and login with hashed passwords
 - Add, edit and delete expenses
@@ -14,7 +17,7 @@ A full stack web app to record, search and analyse personal expenses.
 
 ## Tech stack
 - Python, Flask, Flask-Login, Flask-SQLAlchemy
-- SQLite
+- PostgreSQL (Neon) in production, SQLite for local development
 - HTML, Jinja templates, Bootstrap 5, Chart.js
 - Gunicorn, deployed on Render
 
@@ -35,9 +38,10 @@ A full stack web app to record, search and analyse personal expenses.
 7. Open http://127.0.0.1:5000
 
 ## Future improvements
-- PostgreSQL and database migrations
+- Database migrations with Alembic
 - CSRF protection with Flask-WTF
 - Automated tests with pytest
 - Monthly budgets and alerts
+
 
 
