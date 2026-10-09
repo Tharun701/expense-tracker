@@ -12,7 +12,7 @@ from app import db
 
 @pytest.fixture
 def app():
-    flask_app.config.update(TESTING=True)
+    flask_app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
     with flask_app.app_context():
         db.drop_all()
         db.create_all()
@@ -25,3 +25,4 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+

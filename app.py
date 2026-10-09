@@ -8,6 +8,7 @@ from flask import (Flask, Response, flash, redirect, render_template, request,
 from flask_login import (LoginManager, UserMixin, current_user, login_required,
                          login_user, logout_user)
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -21,6 +22,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-later")
 
 db = SQLAlchemy(app)
+csrf = CSRFProtect(app)
 
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
@@ -313,6 +315,7 @@ def dashboard():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
 
 
 

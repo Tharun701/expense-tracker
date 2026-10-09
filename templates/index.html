@@ -6,7 +6,7 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header">Add Expense</div>
             <div class="card-body">
-                <form method="POST" action="/add">
+                <form method="POST" action="/add"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label class="form-label">Title</label>
                         <input type="text" name="title" class="form-control" required>
@@ -100,7 +100,7 @@
                             <td class="text-end">
                                 <a href="/edit/{{ e.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
                                 <form method="POST" action="/delete/{{ e.id }}" class="d-inline"
-                                      onsubmit="return confirm('Delete this expense?');">
+                                      onsubmit="return confirm('Delete this expense?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                                 </form>
                             </td>
@@ -117,4 +117,5 @@
     </div>
 </div>
 {% endblock %}
+
 

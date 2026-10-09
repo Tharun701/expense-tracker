@@ -114,3 +114,15 @@ def test_dashboard_loads(client):
     login(client)
     add_expense(client)
     assert client.get("/dashboard").status_code == 200
+
+
+# ---------- CSRF ----------
+
+def test_post_without_csrf_token_is_rejected(app):
+    app.config["WTF_CSRF_ENABLED"] = True
+    try:
+        client = app.test_client()
+        response = client.post("/register", data={"username": "mallory", "password": "secret123"})
+        assert response.status_code == 400
+    finally:
+        app.config["WTF_CSRF_ENABLED"] = False
